@@ -27,220 +27,203 @@
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React;
 
-/* ── Daily metrics (manual entry) ── */
 const METRICS = [
   { id: "hrv", label: "HRV", unit: "ms", placeholder: "45", color: "#5eead4" },
   { id: "rhr", label: "Resting HR", unit: "bpm", placeholder: "58", color: "#c084fc" },
 ];
 
-const DAYS_CONFIG = [
-  {
-    name: "Monday", title: "Strength + Stretch + Sauna",
+const WORKOUTS = {
+  weights_upper: {
+    label: "Upper Body Strength", short: "Upper",
     tags: [["Strength","#c084fc"],["Stretch","#f9a8d4"],["Sauna","#fb923c"]],
     blocks: [
       { title: "Upper Body Strength (30-40 min)", color: "#c084fc", items: [
-        { id:"mon_hrv", label:"HRV check on waking — before standing", note:"Green = push. Amber = moderate. Red = movement + sauna only." },
-        { id:"mon_warmup", label:"5 min warm-up — Peloton easy spin or band pull-aparts x 20" },
-        { id:"mon_chest", label:"DB Chest Press — 3 x 10-12", hasWeight:true },
-        { id:"mon_row", label:"Single-Arm DB Row — 3 x 10 each side", hasWeight:true },
-        { id:"mon_face", label:"Band Face Pulls — 3 x 15", note:"Key for posture and posterior shoulder health" },
-        { id:"mon_press", label:"DB Shoulder Press — 3 x 10", hasWeight:true },
-        { id:"mon_curl", label:"Band Bicep Curls — 2 x 12" },
-        { id:"mon_tri", label:"Band Tricep Pushdowns — 2 x 12" },
+        { id:"w_up_hrv", label:"HRV check on waking — before standing", note:"Green = push. Amber = moderate. Red = movement + sauna only." },
+        { id:"w_up_warm", label:"5 min warm-up — Peloton easy spin or band pull-aparts x 20" },
+        { id:"w_up_chest", label:"DB Chest Press — 3 x 6-8", hasWeight:true, note:"Heavier load, lower reps. Push strength correlates with clubhead speed." },
+        { id:"w_up_row", label:"Single-Arm DB Row — 3 x 6-8 each side", hasWeight:true, note:"Unilateral pulling reduces swing asymmetries." },
+        { id:"w_up_face", label:"Band Face Pulls — 3 x 15", note:"Key for posture and posterior shoulder health." },
+        { id:"w_up_press", label:"DB Shoulder Press — 3 x 6-8", hasWeight:true, note:"Standing if possible — activates core stabilizers." },
+        { id:"w_up_pallof", label:"Pallof Press Hold — 3 x 20 sec each side", note:"Anti-rotation core. Trains the braking system that creates the whip effect in your swing." },
+        { id:"w_up_curl", label:"Band Bicep Curls — 2 x 12" },
+        { id:"w_up_tri", label:"Band Tricep Pushdowns — 2 x 12" },
       ]},
       { title: "Post-Workout Stretch (10 min)", color: "#f9a8d4", items: [
-        { id:"mon_hip90", label:"90/90 Hip Stretch — 60 sec each side" },
-        { id:"mon_thread", label:"Thread the Needle — 45 sec each side" },
-        { id:"mon_door", label:"Doorframe Chest Opener — 30 sec" },
-        { id:"mon_quad", label:"Standing Quad + Hip Flexor — 45 sec each side" },
+        { id:"w_up_hip90", label:"90/90 Hip Stretch — 60 sec each side" },
+        { id:"w_up_thread", label:"Thread the Needle — 45 sec each side" },
+        { id:"w_up_door", label:"Doorframe Chest Opener — 30 sec" },
+        { id:"w_up_quad", label:"Standing Quad + Hip Flexor — 45 sec each side" },
       ]},
       { title: "Infrared Sauna", color: "#fb923c", chip:"90+ min before bed", items: [
-        { id:"mon_pre", label:"Pre-heat 15-20 min. 16 oz water before entering." },
-        { id:"mon_r1", label:"Round 1 — 20-25 min at 130-145F", note:"Sweat onset ~10-12 min — stay in." },
-        { id:"mon_c1", label:"Cool-down #1 — 10-15 min. Cool air or shower.", note:"HRV adaptation happens here. Don't rush. No screens." },
-        { id:"mon_r2", label:"Round 2 — 15-20 min. Eyes closed, slow nasal breathing." },
-        { id:"mon_c2", label:"Final cool-down — 10-15 min. Cool shower, sit quietly." },
-        { id:"mon_reh", label:"Rehydrate — 20-24 oz water + electrolytes" },
+        { id:"w_up_pre", label:"Pre-heat 15-20 min. 16 oz water before entering." },
+        { id:"w_up_r1", label:"Round 1 — 20-25 min at 130-145F", note:"Sweat onset ~10-12 min — stay in." },
+        { id:"w_up_c1", label:"Cool-down #1 — 10-15 min. Cool air or shower.", note:"HRV adaptation happens here. No screens." },
+        { id:"w_up_r2", label:"Round 2 — 15-20 min. Eyes closed, slow nasal breathing." },
+        { id:"w_up_c2", label:"Final cool-down — 10-15 min. Cool shower, sit quietly." },
+        { id:"w_up_reh", label:"Rehydrate — 20-24 oz water + electrolytes" },
       ]},
     ],
     tip:"Cool-down phases are the actual HRV training stimulus. Each parasympathetic swing during cooldown is a rep for autonomic adaptation."
   },
-  {
-    name: "Tuesday", title: "Zone 2 + Breathwork + Sauna",
-    tags: [["Zone 2","#5eead4"],["Breathwork","#a78bfa"],["Sauna","#fb923c"]],
+  weights_lower: {
+    label: "Lower Body + Core", short: "Lower",
+    tags: [["Strength","#c084fc"],["Stretch","#f9a8d4"],["Sauna","#fb923c"]],
     blocks: [
-      { title: "Zone 2 Cardio (40-50 min)", color: "#5eead4", items: [
-        { id:"tue_hrv", label:"HRV check on waking" },
-        { id:"tue_bike", label:"Peloton Bike — 40-50 min easy, conversational pace", note:"Target HR ~120-135 bpm. Nasal breathing test." },
-        { id:"tue_alt", label:"Alt: Peloton Tread — incline walk 3-5%" },
-        { id:"tue_cool", label:"5 min easy cool-down walk or spin" },
+      { title: "Lower Body + Core (30-40 min)", color: "#c084fc", items: [
+        { id:"w_lo_hrv", label:"HRV check on waking" },
+        { id:"w_lo_warm", label:"5 min warm-up — band lateral walks + glute bridges x 15" },
+        { id:"w_lo_jump", label:"Squat Jumps — 2 x 5 (explosive)", note:"Power development. Vertical force production directly correlates to clubhead speed." },
+        { id:"w_lo_squat", label:"DB Goblet Squat — 3 x 6-8", hasWeight:true, note:"Go heavier, full depth. Squats build the engine that powers your swing." },
+        { id:"w_lo_rdl", label:"DB Romanian Deadlift — 3 x 6-8", hasWeight:true, note:"Hip hinge strength = the foundation of golf posture and power." },
+        { id:"w_lo_lunge", label:"DB Reverse Lunges — 3 x 6-8 each leg", hasWeight:true, note:"Single-leg strength reduces asymmetries from repetitive swing pattern." },
+        { id:"w_lo_kick", label:"Band Glute Kickbacks — 2 x 15 each" },
+        { id:"w_lo_wood", label:"Cable/Band Woodchops — 3 x 8 each side", note:"Rotational power. Sequence hips then trunk — same pattern as the downswing." },
+        { id:"w_lo_core", label:"Plank 30-45s + Dead Bugs x 10 — 2 rounds", note:"Anti-extension stability. Protects the lower back under rotational load." },
       ]},
-      { title: "Post-Cardio Breathwork (8-10 min)", color: "#a78bfa", items: [
-        { id:"tue_breath", label:"Extended Exhale — 8-10 min, lying down", note:"Inhale 4-5s, exhale 7-8s. ~5 breaths/min." },
+      { title: "Post-Workout Stretch (10 min)", color: "#f9a8d4", items: [
+        { id:"w_lo_hip", label:"90/90 Hip Stretch — 60 sec each side" },
+        { id:"w_lo_pig", label:"Pigeon Pose or Figure-4 — 60 sec each side" },
+        { id:"w_lo_thread", label:"Thread the Needle — 45 sec each side" },
+        { id:"w_lo_quad", label:"Standing Quad + Hip Flexor — 45 sec each side" },
       ]},
       { title: "Infrared Sauna", color: "#fb923c", chip:"90+ min before bed", items: [
-        { id:"tue_pre", label:"Pre-heat 15-20 min + 16 oz water" },
-        { id:"tue_r1", label:"Round 1 — 20-25 min at 130-145F" },
-        { id:"tue_c1", label:"Cool-down #1 — 10-15 min. Let HR drop." },
-        { id:"tue_r2", label:"Round 2 — 15-20 min. Extended Exhale breathing.", note:"Combines two HRV stimuli at once." },
-        { id:"tue_c2", label:"Final cool-down — 10-15 min. Cool shower." },
-        { id:"tue_reh", label:"Rehydrate — 20-24 oz water + electrolytes" },
+        { id:"w_lo_pre", label:"Pre-heat 15-20 min + 16 oz water" },
+        { id:"w_lo_r1", label:"Round 1 — 20-25 min at 130-145F" },
+        { id:"w_lo_c1", label:"Cool-down #1 — 10-15 min." },
+        { id:"w_lo_r2", label:"Round 2 — 15-20 min. Slow nasal breathing." },
+        { id:"w_lo_c2", label:"Final cool-down — 10-15 min + rehydrate" },
+      ]},
+    ],
+    tip:"Strength acutely suppresses HRV — that is the intended stress. Evening infrared accelerates recovery so next-morning HRV rebounds higher."
+  },
+  cardio_bike: {
+    label: "Zone 2 — Peloton Bike", short: "Bike",
+    tags: [["Zone 2","#5eead4"],["Breathwork","#a78bfa"],["Sauna","#fb923c"]],
+    blocks: [
+      { title: "Zone 2 Cardio — Bike (40-50 min)", color: "#5eead4", items: [
+        { id:"c_bk_hrv", label:"HRV check on waking" },
+        { id:"c_bk_ride", label:"Peloton Bike — 40-50 min easy, conversational pace", note:"Target HR ~120-135 bpm. Nasal breathing test." },
+        { id:"c_bk_cool", label:"5 min easy cool-down spin" },
+      ]},
+      { title: "Post-Cardio Breathwork (8-10 min)", color: "#a78bfa", items: [
+        { id:"c_bk_breath", label:"Extended Exhale — 8-10 min, lying down", note:"Inhale 4-5s, exhale 7-8s. ~5 breaths/min." },
+      ]},
+      { title: "Infrared Sauna", color: "#fb923c", chip:"90+ min before bed", items: [
+        { id:"c_bk_pre", label:"Pre-heat 15-20 min + 16 oz water" },
+        { id:"c_bk_r1", label:"Round 1 — 20-25 min at 130-145F" },
+        { id:"c_bk_c1", label:"Cool-down #1 — 10-15 min. Let HR drop." },
+        { id:"c_bk_r2", label:"Round 2 — 15-20 min. Extended Exhale breathing.", note:"Combines two HRV stimuli at once." },
+        { id:"c_bk_c2", label:"Final cool-down — 10-15 min. Cool shower." },
+        { id:"c_bk_reh", label:"Rehydrate — 20-24 oz water + electrolytes" },
       ]},
     ],
     tip:"Zone 2 is the highest-leverage long-term HRV tool. It builds mitochondrial density and trains vagal tone over weeks."
   },
-  {
-    name: "Wednesday", title: "Strength + Stretch + Sauna",
-    tags: [["Strength","#c084fc"],["Stretch","#f9a8d4"],["Sauna","#fb923c"]],
+  cardio_tread: {
+    label: "Zone 2 — Peloton Tread", short: "Tread",
+    tags: [["Zone 2","#5eead4"],["Breathwork","#a78bfa"],["Sauna","#fb923c"]],
     blocks: [
-      { title: "Lower Body + Core (30-40 min)", color: "#c084fc", items: [
-        { id:"wed_hrv", label:"HRV check on waking" },
-        { id:"wed_warm", label:"5 min warm-up — band lateral walks + glute bridges x 15" },
-        { id:"wed_squat", label:"DB Goblet Squat — 3 x 12", hasWeight:true },
-        { id:"wed_rdl", label:"DB Romanian Deadlift — 3 x 10", hasWeight:true },
-        { id:"wed_lunge", label:"DB Reverse Lunges — 3 x 10 each leg", hasWeight:true },
-        { id:"wed_kick", label:"Band Glute Kickbacks — 2 x 15 each" },
-        { id:"wed_core", label:"Plank 30-45s + Dead Bugs x 10 — 2 rounds", note:"Anti-rotation core = better golf swing" },
+      { title: "Zone 2 — Tread (45-55 min)", color: "#5eead4", items: [
+        { id:"c_tr_hrv", label:"HRV check on waking" },
+        { id:"c_tr_walk", label:"Tread — 45-55 min power walk or easy jog", note:"3-5% incline. Nasal breathing throughout." },
+        { id:"c_tr_cool", label:"5 min flat cool-down walk" },
       ]},
-      { title: "Post-Workout Stretch (10 min)", color: "#f9a8d4", items: [
-        { id:"wed_hip", label:"90/90 Hip Stretch — 60 sec each side" },
-        { id:"wed_pig", label:"Pigeon Pose or Figure-4 — 60 sec each side" },
-        { id:"wed_thread", label:"Thread the Needle — 45 sec each side" },
-        { id:"wed_quad", label:"Standing Quad + Hip Flexor — 45 sec each side" },
+      { title: "Post-Cardio Breathwork (8-10 min)", color: "#a78bfa", items: [
+        { id:"c_tr_breath", label:"Extended Exhale — 8-10 min, lying down", note:"Sets up sauna for maximum HRV effect." },
       ]},
       { title: "Infrared Sauna", color: "#fb923c", chip:"90+ min before bed", items: [
-        { id:"wed_pre", label:"Pre-heat 15-20 min + 16 oz water" },
-        { id:"wed_r1", label:"Round 1 — 20-25 min at 130-145F" },
-        { id:"wed_c1", label:"Cool-down #1 — 10-15 min." },
-        { id:"wed_r2", label:"Round 2 — 15-20 min. Slow nasal breathing." },
-        { id:"wed_c2", label:"Final cool-down — 10-15 min + rehydrate" },
+        { id:"c_tr_pre", label:"Pre-heat 15-20 min + 16 oz water" },
+        { id:"c_tr_r1", label:"Round 1 — 20-25 min at 130-145F" },
+        { id:"c_tr_c1", label:"Cool-down #1 — 10-15 min." },
+        { id:"c_tr_r2", label:"Round 2 — 15-20 min. Slow nasal breathing." },
+        { id:"c_tr_c2", label:"Final cool-down — 10-15 min." },
+        { id:"c_tr_reh", label:"Rehydrate + 4-7-8 breathing x 4-6 cycles in bed", note:"Inhale 4, hold 7, exhale 8. Deepens sleep onset." },
       ]},
     ],
-    tip:"Strength acutely suppresses HRV — that is the intended stress. Evening infrared accelerates recovery so Thursday AM HRV rebounds higher."
+    tip:"Zone 2 + Extended Exhale + sauna + 4-7-8 before sleep is a stacked HRV stimulus. Core temp drop post-infrared deepens slow-wave sleep."
   },
-  {
-    name: "Thursday", title: "Breathwork + Pre-Golf + Golf",
+  golf: {
+    label: "Golf Day", short: "Golf",
     tags: [["Breathwork","#a78bfa"],["Mobility","#f9a8d4"],["Golf","#6bcb77"]],
     blocks: [
       { title: "Morning — Easy Movement (10 min)", color: "#67e8f9", items: [
-        { id:"thu_hrv", label:"HRV check on waking — readiness signal" },
-        { id:"thu_spin", label:"10 min easy Peloton spin (no resistance)" },
+        { id:"g_hrv", label:"HRV check on waking — readiness signal" },
+        { id:"g_spin", label:"10 min easy Peloton spin (no resistance)" },
       ]},
       { title: "Box Breathing (8 min)", color: "#a78bfa", items: [
-        { id:"thu_box", label:"4 sec in, 4 hold, 4 out, 4 hold — 8 min", note:"~4 cycles/min. Can be done in the car before golf." },
+        { id:"g_box", label:"4 sec in, 4 hold, 4 out, 4 hold — 8 min", note:"~4 cycles/min. Can be done in the car before golf." },
       ]},
       { title: "Pre-Golf Mobility (10-12 min)", color: "#f9a8d4", items: [
-        { id:"thu_hipc", label:"Hip Circles — 10 circles each direction, each leg" },
-        { id:"thu_trunk", label:"Trunk Rotations — 20 slow reps" },
-        { id:"thu_wgs", label:"World's Greatest Stretch — 5 reps each side", note:"Best single golf prep move." },
-        { id:"thu_shld", label:"Shoulder Cross-Body + Overhead — 30 sec each arm" },
-        { id:"thu_hipf", label:"Half-Kneeling Hip Flexor + Rotation — 45 sec each" },
-        { id:"thu_cat", label:"Cat-Cow x 10 — final spine activation" },
+        { id:"g_hipc", label:"Hip Circles — 10 circles each direction, each leg" },
+        { id:"g_trunk", label:"Trunk Rotations — 20 slow reps" },
+        { id:"g_wgs", label:"World's Greatest Stretch — 5 reps each side", note:"Best single golf prep move." },
+        { id:"g_shld", label:"Shoulder Cross-Body + Overhead — 30 sec each arm" },
+        { id:"g_hipf", label:"Half-Kneeling Hip Flexor + Rotation — 45 sec each" },
+        { id:"g_cat", label:"Cat-Cow x 10 — final spine activation" },
       ]},
-      { title: "Golf League", color: "#6bcb77", items: [
-        { id:"thu_range", label:"10-15 min range warm-up before tee time" },
-        { id:"thu_hyd", label:"Hydrate throughout the round" },
-        { id:"thu_post", label:"Post-round: Supine Spinal Twist — 60 sec each side" },
+      { title: "Golf", color: "#6bcb77", items: [
+        { id:"g_range", label:"10-15 min range warm-up before tee time" },
+        { id:"g_hyd", label:"Hydrate throughout the round" },
+        { id:"g_post", label:"Post-round: Supine Spinal Twist + Child's Pose" },
       ]},
     ],
     tip:"No sauna — intentional. Box breathing 8+ min produces measurable HRV elevation. The body benefits from a day without heat."
   },
-  {
-    name: "Friday", title: "Zone 2 + Breathwork + Sauna",
-    tags: [["Zone 2","#5eead4"],["Breathwork","#a78bfa"],["Sauna","#fb923c"]],
-    blocks: [
-      { title: "Zone 2 — Peloton Tread (45-55 min)", color: "#5eead4", items: [
-        { id:"fri_hrv", label:"HRV check on waking" },
-        { id:"fri_tread", label:"Tread — 45-55 min power walk or easy jog", note:"3-5% incline. Nasal breathing throughout." },
-        { id:"fri_cool", label:"5 min flat cool-down walk" },
-      ]},
-      { title: "Post-Cardio Breathwork (8-10 min)", color: "#a78bfa", items: [
-        { id:"fri_breath", label:"Extended Exhale — 8-10 min, lying down", note:"Sets up sauna for maximum HRV effect." },
-      ]},
-      { title: "Infrared Sauna", color: "#fb923c", chip:"90+ min before bed", items: [
-        { id:"fri_pre", label:"Pre-heat 15-20 min + 16 oz water" },
-        { id:"fri_r1", label:"Round 1 — 20-25 min at 130-145F" },
-        { id:"fri_c1", label:"Cool-down #1 — 10-15 min." },
-        { id:"fri_r2", label:"Round 2 — 15-20 min. Slow nasal breathing." },
-        { id:"fri_c2", label:"Final cool-down — 10-15 min." },
-        { id:"fri_reh", label:"Rehydrate + 4-7-8 breathing x 4-6 cycles in bed", note:"Inhale 4, hold 7, exhale 8. Deepens sleep onset." },
-        { id:"fri_sleep", label:"Early, quality sleep — Fri night is peak HRV adaptation" },
-      ]},
-    ],
-    tip:"Friday is the highest-yield day. Zone 2, Extended Exhale, sauna, 4-7-8 before sleep. Core temp drop post-infrared deepens slow-wave sleep."
-  },
-  {
-    name: "Saturday", title: "Pre-Golf + Golf + Optional Sauna",
-    tags: [["Mobility","#f9a8d4"],["Golf","#6bcb77"],["Sauna*","#fb923c"]],
-    blocks: [
-      { title: "Pre-Golf Mobility (10-12 min)", color: "#f9a8d4", items: [
-        { id:"sat_hrv", label:"HRV check on waking — guides course intensity" },
-        { id:"sat_hipc", label:"Hip Circles — 10 circles each direction, each leg" },
-        { id:"sat_trunk", label:"Trunk Rotations — 20 slow reps" },
-        { id:"sat_wgs", label:"World's Greatest Stretch — 5 reps each side" },
-        { id:"sat_hipf", label:"Half-Kneeling Hip Flexor + Rotation — 45 sec each" },
-        { id:"sat_cat", label:"Cat-Cow x 10 + Shoulder Cross-Body each arm" },
-      ]},
-      { title: "Golf League", color: "#6bcb77", items: [
-        { id:"sat_range", label:"10-15 min range warm-up" },
-        { id:"sat_hyd", label:"Hydrate well — potential sauna after" },
-        { id:"sat_post", label:"Post-round: Supine Spinal Twist + Child's Pose" },
-      ]},
-      { title: "*Optional 5th Sauna (post-golf)", color: "#fb923c", items: [
-        { id:"sat_check", label:"Only if: green HRV + genuinely recovered", note:"Heavy legs or low HRV — skip. Rest is better." },
-        { id:"sat_light", label:"Lighter session: 1-2 rounds of 15-20 min" },
-        { id:"sat_reh", label:"Rehydrate well" },
-      ]},
-    ],
-    tip:"The 5th session is flexible. Golf already provides circulatory benefit. Cool-down quality matters more than session length."
-  },
-  {
-    name: "Sunday", title: "Walk + Breathwork + Full Stretch",
+  rest: {
+    label: "Rest / Recovery", short: "Rest",
     tags: [["Walk","#67e8f9"],["Breathwork","#a78bfa"],["Stretch","#f9a8d4"],["Rest","#94a3b8"]],
     blocks: [
       { title: "Morning — Easy Movement", color: "#67e8f9", items: [
-        { id:"sun_hrv", label:"HRV check — weekly trend read", note:"Sunday AM after full rest = cleanest signal. Compare week over week." },
-        { id:"sun_walk", label:"20-40 min easy outdoor walk", note:"Morning sunlight + gentle movement = autonomic reset." },
+        { id:"r_hrv", label:"HRV check — trend read", note:"Rest-day AM = cleanest signal. Compare week over week." },
+        { id:"r_walk", label:"20-40 min easy outdoor walk", note:"Morning sunlight + gentle movement = autonomic reset." },
       ]},
       { title: "Breathwork (10-12 min)", color: "#a78bfa", items: [
-        { id:"sun_breath", label:"Extended Exhale — 10-12 min, lying down", note:"The week's deepest HRV practice. Let it be easy." },
+        { id:"r_breath", label:"Extended Exhale — 10-12 min, lying down", note:"Deepest HRV practice. Let it be easy." },
       ]},
       { title: "Full-Body Recovery Stretch (12-15 min)", color: "#f9a8d4", items: [
-        { id:"sun_twist", label:"Supine Spinal Twist — 60 sec each side" },
-        { id:"sun_child", label:"Child's Pose (wide knee) — 90 sec" },
-        { id:"sun_fold", label:"Seated Forward Fold — 60 sec" },
-        { id:"sun_legs", label:"Legs Up the Wall — 3-5 min + Extended Exhale", note:"One of the most potent recovery positions without equipment." },
-        { id:"sun_neck", label:"Neck Rolls + Shoulder Shrugs — 60 sec" },
+        { id:"r_twist", label:"Supine Spinal Twist — 60 sec each side" },
+        { id:"r_child", label:"Child's Pose (wide knee) — 90 sec" },
+        { id:"r_fold", label:"Seated Forward Fold — 60 sec" },
+        { id:"r_legs", label:"Legs Up the Wall — 3-5 min + Extended Exhale", note:"One of the most potent recovery positions without equipment." },
+        { id:"r_neck", label:"Neck Rolls + Shoulder Shrugs — 60 sec" },
       ]},
       { title: "Evening Wind-Down", color: "#94a3b8", items: [
-        { id:"sun_dark", label:"Dark, cool room. No screens 30 min before bed." },
-        { id:"sun_478", label:"4-7-8 Breathing x 4-6 cycles in bed", note:"Deep sleep tonight = full week of adaptation locks in." },
+        { id:"r_dark", label:"Dark, cool room. No screens 30 min before bed." },
+        { id:"r_478", label:"4-7-8 Breathing x 4-6 cycles in bed", note:"Deep sleep tonight = adaptation locks in." },
       ]},
     ],
-    tip:"No sauna. Sunday is consolidation. The entire week's adaptation gets cemented during full rest. Protect it."
+    tip:"No sauna. Rest days are consolidation. The adaptation from training gets cemented during full rest. Protect it."
   }
-];
+};
+
+const WEIGHTS_CYCLE = ["weights_upper","weights_lower"];
+const CARDIO_CYCLE = ["cardio_bike","cardio_tread"];
 
 const DAILY_HABITS = [
   { id:"d_hrv", label:"HRV reading before standing — still, lying, first thing", note:"WHOOP auto-captures. Log and track weekly." },
   { id:"d_sleep", label:"7-9 hours sleep targeted" },
   { id:"d_alc", label:"Alcohol minimized or avoided", note:"Single largest acute HRV suppressor." },
-  { id:"d_water", label:"80-100+ oz water daily", note:"Add electrolytes on sauna days." },
+  { id:"d_water", label:"120 oz water minimum daily (160+ oz on sauna days)", note:"At 230 lbs you need 115+ oz baseline. Add 12 oz per 30 min of exercise. Electrolytes on all sauna days." },
 ];
 
 function dateKeyFn(d){ return d.toISOString().split("T")[0]; }
-function dowFn(d){ return d.getDay()===0?6:d.getDay()-1; }
 function fmtDate(d){ return d.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"}); }
 function weekStart(d){ const t=new Date(d); const w=t.getDay(); t.setDate(t.getDate()-(w===0?6:w-1)); t.setHours(0,0,0,0); return t; }
 
-const SK="hrv-app-v3";
+const SK="hrv-app-v4";
 function load(){ try{ const r=localStorage.getItem(SK); return r?JSON.parse(r):{}; }catch{return {};} }
 function saveFn(d){ try{ localStorage.setItem(SK,JSON.stringify(d)); }catch{} }
 
-const C={
-  bg:"#0f172a", surface:"#1e293b", card:"#1e293b", border:"#334155",
-  accent:"#5eead4", accent2:"#c084fc", text:"#e2e8f0", muted:"#94a3b8", dim:"#475569",
-};
+function getNextInCycle(cycle, data, currentKey){
+  const sorted = Object.keys(data).filter(k=>k<currentKey && data[k].workoutType && cycle.includes(data[k].workoutType)).sort().reverse();
+  if(sorted.length===0) return cycle[0];
+  const lastType = data[sorted[0]].workoutType;
+  const idx = cycle.indexOf(lastType);
+  return cycle[(idx+1)%cycle.length];
+}
+
+const C={bg:"#0f172a",surface:"#1e293b",card:"#1e293b",border:"#334155",accent:"#5eead4",accent2:"#c084fc",text:"#e2e8f0",muted:"#94a3b8",dim:"#475569"};
+const TYPE_COLORS={weights:"#c084fc",cardio:"#5eead4",golf:"#6bcb77",rest:"#94a3b8"};
 
 function App(){
   const [data,setData]=useState(load);
@@ -251,71 +234,63 @@ function App(){
   const [tRange,setTRange]=useState(14);
   const [flash,setFlash]=useState(false);
   const cRef=useRef(null);
-
   const key=dateKeyFn(date);
-  const di=dowFn(date);
-  const cfg=DAYS_CONFIG[di];
-  const dd=data[key]||{checks:{},metrics:{},weights:{},notes:""};
+  const dd=data[key]||{checks:{},metrics:{},weights:{},notes:"",workoutType:null};
+  const saveTimer=useRef(null);
+  const dataRef=useRef(data);
+  dataRef.current=data;
 
-  const persist=useCallback((nd)=>{ setData(nd); saveFn(nd); setFlash(true); setTimeout(()=>setFlash(false),1000); },[]);
+  const persist=useCallback((nd)=>{setData(nd);dataRef.current=nd;setFlash(true);setTimeout(()=>setFlash(false),1000);if(saveTimer.current)clearTimeout(saveTimer.current);saveTimer.current=setTimeout(()=>saveFn(nd),300);},[]);
+  const ensureDay=(nd,k)=>{if(!nd[k])nd[k]={checks:{},metrics:{},weights:{},notes:"",workoutType:null};};
+  const tog=(id)=>{const nd=JSON.parse(JSON.stringify(dataRef.current));ensureDay(nd,key);nd[key].checks[id]=!nd[key].checks[id];persist(nd);};
+  const setM=(id,v)=>{const nd=JSON.parse(JSON.stringify(dataRef.current));ensureDay(nd,key);nd[key].metrics[id]=v;persist(nd);};
+  const setW2=(id,v)=>{const nd=JSON.parse(JSON.stringify(dataRef.current));ensureDay(nd,key);nd[key].weights[id]=v;persist(nd);};
+  const setN=(v)=>{const nd=JSON.parse(JSON.stringify(dataRef.current));ensureDay(nd,key);nd[key].notes=v;persist(nd);};
 
-  const tog=(id)=>{ const nd={...data}; if(!nd[key]) nd[key]={checks:{},metrics:{},weights:{},notes:""}; nd[key]={...nd[key],checks:{...nd[key].checks,[id]:!nd[key].checks?.[id]}}; persist(nd); };
-  const setM=(id,v)=>{ const nd={...data}; if(!nd[key]) nd[key]={checks:{},metrics:{},weights:{},notes:""}; nd[key]={...nd[key],metrics:{...nd[key].metrics,[id]:v}}; persist(nd); };
-  const setW=(id,v)=>{ const nd={...data}; if(!nd[key]) nd[key]={checks:{},metrics:{},weights:{},notes:""}; nd[key]={...nd[key],weights:{...nd[key].weights,[id]:v}}; persist(nd); };
-  const setN=(v)=>{ const nd={...data}; if(!nd[key]) nd[key]={checks:{},metrics:{},weights:{},notes:""}; nd[key]={...nd[key],notes:v}; persist(nd); };
+  const setWorkoutType=(type)=>{
+    const nd=JSON.parse(JSON.stringify(dataRef.current));ensureDay(nd,key);
+    let resolved=type;
+    if(type==="weights")resolved=getNextInCycle(WEIGHTS_CYCLE,nd,key);
+    if(type==="cardio")resolved=getNextInCycle(CARDIO_CYCLE,nd,key);
+    nd[key].workoutType=nd[key].workoutType===resolved?null:resolved;
+    nd[key].checks={};persist(nd);setOpen({});
+  };
 
-  const shift=(n)=>{ const d=new Date(date); d.setDate(d.getDate()+n); setDate(d); setOpen({}); };
-
-  const allItems=cfg.blocks.flatMap(b=>b.items);
-  const totalItems=allItems.length+DAILY_HABITS.length;
-  const doneCount=allItems.filter(i=>dd.checks?.[i.id]).length+DAILY_HABITS.filter(i=>dd.checks?.[i.id]).length;
+  const shift=(n)=>{const d=new Date(date);d.setDate(d.getDate()+n);setDate(d);setOpen({});};
+  const activeType=dd.workoutType;
+  const activeWorkout=activeType?WORKOUTS[activeType]:null;
+  const allItems=activeWorkout?activeWorkout.blocks.flatMap(b=>b.items):[];
+  const showHabits=!!activeType;
+  const totalItems=allItems.length+(showHabits?DAILY_HABITS.length:0);
+  const doneCount=allItems.filter(i=>dd.checks?.[i.id]).length+(showHabits?DAILY_HABITS.filter(i=>dd.checks?.[i.id]).length:0);
   const pct=totalItems?Math.round(doneCount/totalItems*100):0;
-
   const ws=weekStart(date);
-  const weekDays=Array.from({length:7},(_,i)=>{ const d=new Date(ws); d.setDate(d.getDate()+i); return d; });
+  const weekDays=Array.from({length:7},(_,i)=>{const d=new Date(ws);d.setDate(d.getDate()+i);return d;});
+  const nextWeights=getNextInCycle(WEIGHTS_CYCLE,dataRef.current,key);
+  const nextCardio=getNextInCycle(CARDIO_CYCLE,dataRef.current,key);
 
   const tData=[];
-  for(let i=tRange-1;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); const k=dateKeyFn(d); const v=data[k]?.metrics?.[tMet]; tData.push({date:d,key:k,value:v?parseFloat(v):null,label:d.toLocaleDateString("en-US",{month:"short",day:"numeric"})}); }
+  for(let i=tRange-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=dateKeyFn(d);const v=data[k]?.metrics?.[tMet];tData.push({date:d,key:k,value:v?parseFloat(v):null,label:d.toLocaleDateString("en-US",{month:"short",day:"numeric"})});}
 
   useEffect(()=>{
-    if(tab!=="trends"||!cRef.current) return;
-    const canvas=cRef.current; const ctx=canvas.getContext("2d");
-    const dpr=window.devicePixelRatio||1;
+    if(tab!=="trends"||!cRef.current)return;
+    const canvas=cRef.current;const ctx=canvas.getContext("2d");const dpr=window.devicePixelRatio||1;
     const rect=canvas.parentElement.getBoundingClientRect();
-    canvas.width=rect.width*dpr; canvas.height=220*dpr;
-    canvas.style.width=rect.width+"px"; canvas.style.height="220px";
-    ctx.scale(dpr,dpr);
-    const W=rect.width,H=220;
-    const filtered=tData.filter(d=>d.value!==null);
-    ctx.clearRect(0,0,W,H);
-    if(filtered.length<2){
-      ctx.fillStyle="#94a3b8"; ctx.font="13px -apple-system,sans-serif"; ctx.textAlign="center";
-      ctx.fillText("Need at least 2 data points",W/2,H/2); return;
-    }
-    const vals=filtered.map(d=>d.value);
-    const minV=Math.min(...vals),maxV=Math.max(...vals);
-    const pad={top:24,right:16,bottom:36,left:48};
-    const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
-    const range=maxV-minV||1;
-    ctx.strokeStyle="rgba(148,163,184,0.1)"; ctx.lineWidth=0.5;
-    for(let i=0;i<=4;i++){
-      const y=pad.top+(cH/4)*i;
-      ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(W-pad.right,y); ctx.stroke();
-      ctx.fillStyle="#64748b"; ctx.font="11px -apple-system,sans-serif"; ctx.textAlign="right";
-      const v=maxV-(range/4)*i; ctx.fillText(Number.isInteger(v)?String(v):v.toFixed(1),pad.left-8,y+4);
-    }
-    const step=Math.max(1,Math.floor(tData.length/7));
-    ctx.fillStyle="#64748b"; ctx.font="10px -apple-system,sans-serif"; ctx.textAlign="center";
-    tData.forEach((d,i)=>{ if(i%step===0||i===tData.length-1){ const x=pad.left+(i/(tData.length-1))*cW; ctx.fillText(d.label,x,H-8); } });
-    const mc=METRICS.find(m=>m.id===tMet)?.color||"#5eead4";
-    ctx.strokeStyle=mc; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.lineCap="round";
-    ctx.beginPath(); let started=false;
-    tData.forEach((d,i)=>{ if(d.value===null) return; const x=pad.left+(i/(tData.length-1))*cW; const y=pad.top+cH-((d.value-minV)/range)*cH; if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y); });
-    ctx.stroke();
-    const last=[...tData].reverse().find(d=>d.value!==null);
-    const first=tData.find(d=>d.value!==null);
-    if(last&&first){ const lx=pad.left+(tData.indexOf(last)/(tData.length-1))*cW; const fx=pad.left+(tData.indexOf(first)/(tData.length-1))*cW; ctx.lineTo(lx,pad.top+cH); ctx.lineTo(fx,pad.top+cH); ctx.closePath(); ctx.fillStyle=mc+"15"; ctx.fill(); }
-    tData.forEach((d,i)=>{ if(d.value===null) return; const x=pad.left+(i/(tData.length-1))*cW; const y=pad.top+cH-((d.value-minV)/range)*cH; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fillStyle=mc; ctx.fill(); ctx.beginPath(); ctx.arc(x,y,2,0,Math.PI*2); ctx.fillStyle="#0f172a"; ctx.fill(); });
+    canvas.width=rect.width*dpr;canvas.height=220*dpr;canvas.style.width=rect.width+"px";canvas.style.height="220px";ctx.scale(dpr,dpr);
+    const W=rect.width,H=220;const filtered=tData.filter(d=>d.value!==null);ctx.clearRect(0,0,W,H);
+    if(filtered.length<2){ctx.fillStyle="#94a3b8";ctx.font="13px -apple-system,sans-serif";ctx.textAlign="center";ctx.fillText("Need at least 2 data points",W/2,H/2);return;}
+    const vals=filtered.map(d=>d.value);const minV=Math.min(...vals),maxV=Math.max(...vals);
+    const pad={top:24,right:16,bottom:36,left:48};const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;const range=maxV-minV||1;
+    ctx.strokeStyle="rgba(148,163,184,0.1)";ctx.lineWidth=0.5;
+    for(let i=0;i<=4;i++){const y=pad.top+(cH/4)*i;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(W-pad.right,y);ctx.stroke();ctx.fillStyle="#64748b";ctx.font="11px -apple-system,sans-serif";ctx.textAlign="right";const v=maxV-(range/4)*i;ctx.fillText(Number.isInteger(v)?String(v):v.toFixed(1),pad.left-8,y+4);}
+    const step=Math.max(1,Math.floor(tData.length/7));ctx.fillStyle="#64748b";ctx.font="10px -apple-system,sans-serif";ctx.textAlign="center";
+    tData.forEach((d,i)=>{if(i%step===0||i===tData.length-1){const x=pad.left+(i/(tData.length-1))*cW;ctx.fillText(d.label,x,H-8);}});
+    const mc=METRICS.find(m=>m.id===tMet)?.color||"#5eead4";ctx.strokeStyle=mc;ctx.lineWidth=2.5;ctx.lineJoin="round";ctx.lineCap="round";
+    ctx.beginPath();let started=false;
+    tData.forEach((d,i)=>{if(d.value===null)return;const x=pad.left+(i/(tData.length-1))*cW;const y=pad.top+cH-((d.value-minV)/range)*cH;if(!started){ctx.moveTo(x,y);started=true;}else ctx.lineTo(x,y);});ctx.stroke();
+    const last=[...tData].reverse().find(d=>d.value!==null);const first=tData.find(d=>d.value!==null);
+    if(last&&first){const lx=pad.left+(tData.indexOf(last)/(tData.length-1))*cW;const fx=pad.left+(tData.indexOf(first)/(tData.length-1))*cW;ctx.lineTo(lx,pad.top+cH);ctx.lineTo(fx,pad.top+cH);ctx.closePath();ctx.fillStyle=mc+"15";ctx.fill();}
+    tData.forEach((d,i)=>{if(d.value===null)return;const x=pad.left+(i/(tData.length-1))*cW;const y=pad.top+cH-((d.value-minV)/range)*cH;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle=mc;ctx.fill();ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fillStyle="#0f172a";ctx.fill();});
   },[tab,tMet,tRange,data]);
 
   const valid=tData.filter(d=>d.value!==null);
@@ -323,7 +298,7 @@ function App(){
   const lo=valid.length?Math.min(...valid.map(d=>d.value)):0;
   const hi=valid.length?Math.max(...valid.map(d=>d.value)):0;
 
-  const CheckItem=({item,checked})=>(
+  const CheckItem=useCallback(({item,checked,weightVal})=>(
     <div onClick={()=>tog(item.id)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",borderRadius:8,cursor:"pointer",opacity:checked?0.4:1,transition:"opacity 0.15s",WebkitTapHighlightColor:"transparent"}}>
       <div style={{width:20,height:20,borderRadius:5,flexShrink:0,marginTop:1,border:checked?"none":"1.5px solid "+C.dim,background:checked?C.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}>
         {checked&&<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke={C.bg} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -331,16 +306,13 @@ function App(){
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:13,lineHeight:1.5,color:C.text}}>{item.label}</div>
         {item.note&&<div style={{fontSize:11,color:C.muted,marginTop:2,lineHeight:1.4}}>{item.note}</div>}
-        {item.hasWeight&&(
-          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6}} onClick={e=>e.stopPropagation()}>
-            <input type="text" inputMode="decimal" placeholder="wt" value={dd.weights?.[item.id]||""} onChange={e=>setW(item.id,e.target.value)}
-              style={{width:56,background:C.bg,border:"1px solid "+C.border,borderRadius:6,padding:"4px 8px",fontSize:12,color:C.accent2,fontFamily:"inherit",outline:"none"}} />
-            <span style={{fontSize:10,color:C.dim}}>lbs</span>
-          </div>
-        )}
+        {item.hasWeight&&(<div style={{display:"flex",alignItems:"center",gap:6,marginTop:6}} onClick={e=>e.stopPropagation()}>
+          <input type="text" inputMode="decimal" placeholder="wt" defaultValue={weightVal||""} key={item.id+"-w-"+key} onBlur={e=>setW2(item.id,e.target.value)}
+            style={{width:56,background:C.bg,border:"1px solid "+C.border,borderRadius:6,padding:"4px 8px",fontSize:12,color:C.accent2,fontFamily:"inherit",outline:"none"}} />
+          <span style={{fontSize:10,color:C.dim}}>lbs</span></div>)}
       </div>
     </div>
-  );
+  ),[key]);
 
   return (
     <div style={{background:C.bg,color:C.text,minHeight:"100vh",padding:16,fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",maxWidth:600,margin:"0 auto",WebkitFontSmoothing:"antialiased"}}>
@@ -348,184 +320,137 @@ function App(){
         <div style={{fontSize:10,letterSpacing:"0.2em",color:C.accent,textTransform:"uppercase",marginBottom:4}}>Weekly protocol · HRV optimization</div>
         <div style={{fontSize:22,fontWeight:700,color:C.text,lineHeight:1.2}}>Train for a <span style={{color:C.accent}}>stronger</span> nervous system.</div>
       </div>
-
       <div style={{display:"flex",gap:2,borderBottom:"1px solid "+C.border,marginBottom:16}}>
         {[["daily","Daily tracker"],["trends","Trends"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setTab(id)}
-            style={{background:"none",border:"none",padding:"10px 18px",fontSize:13,fontWeight:600,
-              color:tab===id?C.accent:C.muted,borderBottom:tab===id?"2px solid "+C.accent:"2px solid transparent",
-              cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{label}</button>
+          <button key={id} onClick={()=>setTab(id)} style={{background:"none",border:"none",padding:"10px 18px",fontSize:13,fontWeight:600,color:tab===id?C.accent:C.muted,borderBottom:tab===id?"2px solid "+C.accent:"2px solid transparent",cursor:"pointer",fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{label}</button>
         ))}
         <div style={{marginLeft:"auto",fontSize:10,color:C.accent,opacity:flash?1:0,transition:"opacity 0.3s",alignSelf:"center",paddingRight:8}}>saved</div>
       </div>
 
-      {tab==="daily"&&(
-        <>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-            <button onClick={()=>shift(-1)} style={{background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:"10px 16px",cursor:"pointer",color:C.text,fontSize:16,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>←</button>
-            <div style={{textAlign:"center"}}>
-              <div style={{fontSize:15,fontWeight:600,color:C.text}}>{fmtDate(date)}</div>
-              <button onClick={()=>{setDate(new Date());setOpen({});}} style={{background:"none",border:"none",fontSize:11,color:C.accent,cursor:"pointer",padding:0,marginTop:2,fontFamily:"inherit"}}>today</button>
-            </div>
-            <button onClick={()=>shift(1)} style={{background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:"10px 16px",cursor:"pointer",color:C.text,fontSize:16,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>→</button>
+      {tab==="daily"&&(<>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+          <button onClick={()=>shift(-1)} style={{background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:"10px 16px",cursor:"pointer",color:C.text,fontSize:16,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>&#8592;</button>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:15,fontWeight:600,color:C.text}}>{fmtDate(date)}</div>
+            <button onClick={()=>{setDate(new Date());setOpen({});}} style={{background:"none",border:"none",fontSize:11,color:C.accent,cursor:"pointer",padding:0,marginTop:2,fontFamily:"inherit"}}>today</button>
           </div>
+          <button onClick={()=>shift(1)} style={{background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:"10px 16px",cursor:"pointer",color:C.text,fontSize:16,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>&#8594;</button>
+        </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7, 1fr)",gap:4,marginBottom:14}}>
-            {weekDays.map((wd,i)=>{
-              const isToday=dateKeyFn(wd)===key;
-              const wdData=data[dateKeyFn(wd)];
-              const c=DAYS_CONFIG[i];
-              const tot=c.blocks.flatMap(b=>b.items).length+DAILY_HABITS.length;
-              const dn=c.blocks.flatMap(b=>b.items).filter(it=>wdData?.checks?.[it.id]).length+DAILY_HABITS.filter(it=>wdData?.checks?.[it.id]).length;
-              const wp=tot?Math.round(dn/tot*100):0;
-              return(
-                <div key={i} onClick={()=>{setDate(new Date(wd));setOpen({});}}
-                  style={{padding:"8px 2px",textAlign:"center",borderRadius:8,cursor:"pointer",
-                    border:isToday?"1.5px solid "+C.accent:"1px solid "+C.border,
-                    background:isToday?"rgba(94,234,212,0.08)":C.surface,transition:"all 0.15s",
-                    WebkitTapHighlightColor:"transparent"}}>
-                  <div style={{fontSize:9,letterSpacing:"0.1em",color:C.dim,textTransform:"uppercase",marginBottom:3}}>{["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][i]}</div>
-                  <div style={{fontSize:14,fontWeight:600,color:isToday?C.accent:C.text,marginBottom:3}}>{wd.getDate()}</div>
-                  {dn>0&&<div style={{fontSize:8,color:wp===100?C.accent:C.muted,fontWeight:500}}>{wp}%</div>}
-                </div>
-              );
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7, 1fr)",gap:4,marginBottom:14}}>
+          {weekDays.map((wd,i)=>{const wk=dateKeyFn(wd);const isToday=wk===key;const wdData=data[wk];const wType=wdData?.workoutType;
+            const wColor=wType?(wType.startsWith("weights")?TYPE_COLORS.weights:wType.startsWith("cardio")?TYPE_COLORS.cardio:wType==="golf"?TYPE_COLORS.golf:TYPE_COLORS.rest):null;
+            return(<div key={i} onClick={()=>{setDate(new Date(wd));setOpen({});}}
+              style={{padding:"8px 2px",textAlign:"center",borderRadius:8,cursor:"pointer",border:isToday?"1.5px solid "+C.accent:"1px solid "+C.border,background:isToday?"rgba(94,234,212,0.08)":C.surface,transition:"all 0.15s",WebkitTapHighlightColor:"transparent"}}>
+              <div style={{fontSize:9,letterSpacing:"0.1em",color:C.dim,textTransform:"uppercase",marginBottom:3}}>{wd.toLocaleDateString("en-US",{weekday:"short"}).slice(0,3)}</div>
+              <div style={{fontSize:14,fontWeight:600,color:isToday?C.accent:C.text,marginBottom:3}}>{wd.getDate()}</div>
+              {wType&&<div style={{fontSize:7,color:wColor,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.05em"}}>{WORKOUTS[wType]?.short}</div>}
+            </div>);
+          })}
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:9,fontWeight:600,letterSpacing:"0.15em",textTransform:"uppercase",color:C.dim,marginBottom:8}}>What are you doing today?</div>
+          <div style={{display:"flex",gap:6}}>
+            {[["weights","Weights","Next: "+WORKOUTS[nextWeights]?.short,TYPE_COLORS.weights],["cardio","Cardio","Next: "+WORKOUTS[nextCardio]?.short,TYPE_COLORS.cardio],["golf","Golf",null,TYPE_COLORS.golf],["rest","Rest",null,TYPE_COLORS.rest]].map(([type,label,sub,color])=>{
+              const isActive=type==="weights"?activeType?.startsWith("weights"):type==="cardio"?activeType?.startsWith("cardio"):activeType===type;
+              return(<button key={type} onClick={()=>setWorkoutType(type)} style={{flex:1,background:isActive?color+"20":C.surface,border:isActive?"1.5px solid "+color:"1px solid "+C.border,borderRadius:10,padding:"12px 6px",cursor:"pointer",textAlign:"center",WebkitTapHighlightColor:"transparent",transition:"all 0.15s"}}>
+                <div style={{fontSize:13,fontWeight:700,color:isActive?color:C.text,marginBottom:sub?2:0}}>{label}</div>
+                {sub&&<div style={{fontSize:9,color:isActive?color:C.dim,fontWeight:500}}>{sub}</div>}
+              </button>);
             })}
           </div>
+        </div>
 
-          <div style={{display:"flex",gap:8,marginBottom:14}}>
-            {METRICS.map(m=>(
-              <div key={m.id} style={{flex:1,background:C.surface,border:"1px solid "+C.border,borderRadius:10,padding:"10px 14px"}}>
-                <div style={{fontSize:9,color:m.color,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:600}}>{m.label}</div>
-                <div style={{display:"flex",alignItems:"baseline",gap:4}}>
-                  <input type="text" inputMode="decimal" placeholder={m.placeholder} value={dd.metrics?.[m.id]||""}
-                    onChange={e=>setM(m.id,e.target.value)}
-                    style={{width:"100%",background:C.bg,border:"1px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:16,fontWeight:600,color:m.color,fontFamily:"inherit",outline:"none"}}/>
-                  <span style={{fontSize:10,color:C.dim,flexShrink:0}}>{m.unit}</span>
-                </div>
-              </div>
-            ))}
-            <div style={{flex:1,background:C.surface,border:"1px solid "+C.border,borderRadius:10,padding:"10px 14px"}}>
-              <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:600}}>Done</div>
-              <div style={{height:6,background:C.bg,borderRadius:3,overflow:"hidden",marginBottom:6}}>
-                <div style={{height:"100%",width:pct+"%",background:pct===100?C.accent:C.accent2,borderRadius:3,transition:"width 0.3s"}}/>
-              </div>
-              <div style={{fontSize:13,fontWeight:600,color:pct===100?C.accent:C.text}}>{doneCount}/{totalItems} <span style={{color:C.muted,fontWeight:400}}>({pct}%)</span></div>
-            </div>
-          </div>
+        <div style={{display:"flex",gap:8,marginBottom:14}}>
+          {METRICS.map(m=>(<div key={m.id} style={{flex:1,background:C.surface,border:"1px solid "+C.border,borderRadius:10,padding:"10px 14px"}}>
+            <div style={{fontSize:9,color:m.color,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:600}}>{m.label}</div>
+            <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+              <input type="text" inputMode="decimal" placeholder={m.placeholder} defaultValue={dd.metrics?.[m.id]||""} key={m.id+"-"+key} onBlur={e=>setM(m.id,e.target.value)}
+                style={{width:"100%",background:C.bg,border:"1px solid "+C.border,borderRadius:6,padding:"6px 8px",fontSize:16,fontWeight:600,color:m.color,fontFamily:"inherit",outline:"none"}}/>
+              <span style={{fontSize:10,color:C.dim,flexShrink:0}}>{m.unit}</span>
+            </div></div>))}
+          {activeWorkout&&(<div style={{flex:1,background:C.surface,border:"1px solid "+C.border,borderRadius:10,padding:"10px 14px"}}>
+            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:600}}>Done</div>
+            <div style={{height:6,background:C.bg,borderRadius:3,overflow:"hidden",marginBottom:6}}><div style={{height:"100%",width:pct+"%",background:pct===100?C.accent:C.accent2,borderRadius:3,transition:"width 0.3s"}}/></div>
+            <div style={{fontSize:13,fontWeight:600,color:pct===100?C.accent:C.text}}>{doneCount}/{totalItems}</div>
+          </div>)}
+        </div>
 
+        {activeWorkout&&(<>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
-            {cfg.tags.map(([label,color],i)=>(
-              <span key={i} style={{fontSize:10,padding:"3px 10px",borderRadius:12,letterSpacing:"0.04em",fontWeight:600,background:color+"18",color:color}}>{label}</span>
-            ))}
+            {activeWorkout.tags.map(([label,color],i)=>(<span key={i} style={{fontSize:10,padding:"3px 10px",borderRadius:12,letterSpacing:"0.04em",fontWeight:600,background:color+"18",color:color}}>{label}</span>))}
           </div>
 
-          {cfg.blocks.map((block,bi)=>{
-            const blockDone=block.items.filter(i=>dd.checks?.[i.id]).length;
-            return(
-              <div key={bi} style={{marginBottom:8,border:"1px solid "+C.border,borderRadius:10,overflow:"hidden",background:C.card}}>
-                <div onClick={()=>setOpen(p=>({...p,[bi]:!p[bi]}))}
-                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 14px",cursor:"pointer",
-                    borderBottom:open[bi]?"1px solid "+C.border:"none",WebkitTapHighlightColor:"transparent"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
-                    <div style={{width:4,height:28,borderRadius:2,background:block.color,flexShrink:0}}/>
-                    <div style={{minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:600,color:C.text}}>{block.title}</div>
-                      {block.chip&&<span style={{fontSize:9,padding:"1px 7px",borderRadius:10,background:block.color+"20",color:block.color,marginTop:2,display:"inline-block"}}>{block.chip}</span>}
-                    </div>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                    <span style={{fontSize:11,color:blockDone===block.items.length&&blockDone>0?C.accent:C.muted,fontWeight:500}}>{blockDone}/{block.items.length}</span>
-                    <span style={{color:C.muted,fontSize:18,transform:open[bi]?"rotate(180deg)":"none",transition:"transform 0.2s",lineHeight:1}}>&#8964;</span>
+          {activeWorkout.blocks.map((block,bi)=>{const blockDone=block.items.filter(i=>dd.checks?.[i.id]).length;
+            return(<div key={bi} style={{marginBottom:8,border:"1px solid "+C.border,borderRadius:10,overflow:"hidden",background:C.card}}>
+              <div onClick={()=>setOpen(p=>({...p,[bi]:!p[bi]}))} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 14px",cursor:"pointer",borderBottom:open[bi]?"1px solid "+C.border:"none",WebkitTapHighlightColor:"transparent"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0}}>
+                  <div style={{width:4,height:28,borderRadius:2,background:block.color,flexShrink:0}}/>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:C.text}}>{block.title}</div>
+                    {block.chip&&<span style={{fontSize:9,padding:"1px 7px",borderRadius:10,background:block.color+"20",color:block.color,marginTop:2,display:"inline-block"}}>{block.chip}</span>}
                   </div>
                 </div>
-                {open[bi]&&(
-                  <div style={{padding:"4px 4px 8px"}}>
-                    {block.items.map(item=><CheckItem key={item.id} item={item} checked={!!dd.checks?.[item.id]}/>)}
-                  </div>
-                )}
+                <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                  <span style={{fontSize:11,color:blockDone===block.items.length&&blockDone>0?C.accent:C.muted,fontWeight:500}}>{blockDone}/{block.items.length}</span>
+                  <span style={{color:C.muted,fontSize:18,transform:open[bi]?"rotate(180deg)":"none",transition:"transform 0.2s",lineHeight:1}}>&#8964;</span>
+                </div>
               </div>
-            );
+              {open[bi]&&(<div style={{padding:"4px 4px 8px"}}>{block.items.map(item=><CheckItem key={item.id} item={item} checked={!!dd.checks?.[item.id]} weightVal={dd.weights?.[item.id]}/>)}</div>)}
+            </div>);
           })}
 
           <div style={{marginTop:16,marginBottom:16,border:"1px solid rgba(94,234,212,0.2)",borderRadius:10,overflow:"hidden",background:"rgba(94,234,212,0.04)"}}>
-            <div style={{padding:"12px 14px",borderBottom:"1px solid rgba(94,234,212,0.12)"}}>
-              <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.15em",textTransform:"uppercase",color:C.accent}}>Daily non-negotiables</div>
-            </div>
-            <div style={{padding:"2px 4px 6px"}}>
-              {DAILY_HABITS.map(item=><CheckItem key={item.id} item={item} checked={!!dd.checks?.[item.id]}/>)}
-            </div>
+            <div style={{padding:"12px 14px",borderBottom:"1px solid rgba(94,234,212,0.12)"}}><div style={{fontSize:10,fontWeight:600,letterSpacing:"0.15em",textTransform:"uppercase",color:C.accent}}>Daily non-negotiables</div></div>
+            <div style={{padding:"2px 4px 6px"}}>{DAILY_HABITS.map(item=><CheckItem key={item.id} item={item} checked={!!dd.checks?.[item.id]}/>)}</div>
           </div>
 
-          {cfg.tip&&(
-            <div style={{background:"rgba(94,234,212,0.04)",border:"1px solid rgba(94,234,212,0.15)",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
-              <div style={{fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",color:C.accent,marginBottom:4,fontWeight:600}}>HRV tip — {cfg.name}</div>
-              <div style={{fontSize:12,color:C.muted,lineHeight:1.6}}>{cfg.tip}</div>
-            </div>
-          )}
+          {activeWorkout.tip&&(<div style={{background:"rgba(94,234,212,0.04)",border:"1px solid rgba(94,234,212,0.15)",borderRadius:8,padding:"12px 14px",marginBottom:16}}>
+            <div style={{fontSize:9,letterSpacing:"0.15em",textTransform:"uppercase",color:C.accent,marginBottom:4,fontWeight:600}}>HRV tip</div>
+            <div style={{fontSize:12,color:C.muted,lineHeight:1.6}}>{activeWorkout.tip}</div>
+          </div>)}
+        </>)}
 
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:C.muted,marginBottom:6}}>Notes</div>
-            <textarea placeholder="Energy, recovery observations, anything notable..." value={dd.notes||""} onChange={e=>setN(e.target.value)}
-              style={{width:"100%",minHeight:72,background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:"10px 12px",fontSize:13,color:C.text,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
-          </div>
-        </>
-      )}
+        {!activeWorkout&&(<div style={{padding:40,textAlign:"center",color:C.dim,fontSize:13}}>Select a workout type above to load today's routine.</div>)}
 
-      {tab==="trends"&&(
-        <>
-          <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:12}}>
-            {METRICS.map(m=>(
-              <button key={m.id} onClick={()=>setTMet(m.id)}
-                style={{background:tMet===m.id?m.color+"20":"transparent",border:tMet===m.id?"1px solid "+m.color:"1px solid "+C.border,
-                  borderRadius:16,padding:"5px 12px",fontSize:11,cursor:"pointer",color:tMet===m.id?m.color:C.muted,fontWeight:600,fontFamily:"inherit",
-                  WebkitTapHighlightColor:"transparent"}}>{m.label}</button>
-            ))}
-          </div>
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:C.muted,marginBottom:6}}>Notes</div>
+          <textarea placeholder="Energy, recovery observations, anything notable..." defaultValue={dd.notes||""} key={"notes-"+key} onBlur={e=>setN(e.target.value)}
+            style={{width:"100%",minHeight:72,background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:"10px 12px",fontSize:13,color:C.text,fontFamily:"inherit",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+        </div>
+      </>)}
 
-          <div style={{display:"flex",gap:4,marginBottom:14}}>
-            {[{v:7,l:"7d"},{v:14,l:"14d"},{v:30,l:"30d"},{v:90,l:"90d"}].map(r=>(
-              <button key={r.v} onClick={()=>setTRange(r.v)}
-                style={{background:tRange===r.v?C.surface:"transparent",border:"none",padding:"5px 12px",fontSize:12,cursor:"pointer",
-                  borderRadius:6,color:tRange===r.v?C.text:C.dim,fontWeight:tRange===r.v?600:400,fontFamily:"inherit"}}>{r.l}</button>
-            ))}
-          </div>
-
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
-            {[{l:"Avg",v:avg},{l:"Low",v:lo},{l:"High",v:hi}].map((s,i)=>(
-              <div key={i} style={{background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:10,textAlign:"center"}}>
-                <div style={{fontSize:20,fontWeight:700,color:METRICS.find(m=>m.id===tMet)?.color||C.accent}}>
-                  {valid.length?(Number.isInteger(s.v)?s.v:s.v.toFixed(1)):"---"}
-                </div>
-                <div style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:500}}>{s.l}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{position:"relative",width:"100%",height:220,marginBottom:20}}>
-            <canvas ref={cRef}/>
-          </div>
-
-          <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:C.muted,marginBottom:8}}>
-            {METRICS.find(m=>m.id===tMet)?.label} log
-          </div>
-          <div style={{maxHeight:260,overflowY:"auto"}}>
-            {[...tData].reverse().filter(d=>d.value!==null).map((d,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 10px",borderBottom:"1px solid "+C.border,fontSize:13}}>
-                <span style={{color:C.muted}}>{d.label}</span>
-                <span style={{fontWeight:600,color:METRICS.find(m=>m.id===tMet)?.color}}>{d.value} {METRICS.find(m=>m.id===tMet)?.unit}</span>
-              </div>
-            ))}
-            {valid.length===0&&<div style={{padding:24,textAlign:"center",color:C.dim,fontSize:13}}>No data yet — start logging daily metrics.</div>}
-          </div>
-        </>
-      )}
+      {tab==="trends"&&(<>
+        <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:12}}>
+          {METRICS.map(m=>(<button key={m.id} onClick={()=>setTMet(m.id)} style={{background:tMet===m.id?m.color+"20":"transparent",border:tMet===m.id?"1px solid "+m.color:"1px solid "+C.border,borderRadius:16,padding:"5px 12px",fontSize:11,cursor:"pointer",color:tMet===m.id?m.color:C.muted,fontWeight:600,fontFamily:"inherit",WebkitTapHighlightColor:"transparent"}}>{m.label}</button>))}
+        </div>
+        <div style={{display:"flex",gap:4,marginBottom:14}}>
+          {[{v:7,l:"7d"},{v:14,l:"14d"},{v:30,l:"30d"},{v:90,l:"90d"}].map(r=>(<button key={r.v} onClick={()=>setTRange(r.v)} style={{background:tRange===r.v?C.surface:"transparent",border:"none",padding:"5px 12px",fontSize:12,cursor:"pointer",borderRadius:6,color:tRange===r.v?C.text:C.dim,fontWeight:tRange===r.v?600:400,fontFamily:"inherit"}}>{r.l}</button>))}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
+          {[{l:"Avg",v:avg},{l:"Low",v:lo},{l:"High",v:hi}].map((s,i)=>(<div key={i} style={{background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:10,textAlign:"center"}}>
+            <div style={{fontSize:20,fontWeight:700,color:METRICS.find(m=>m.id===tMet)?.color||C.accent}}>{valid.length?(Number.isInteger(s.v)?s.v:s.v.toFixed(1)):"---"}</div>
+            <div style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:500}}>{s.l}</div>
+          </div>))}
+        </div>
+        <div style={{position:"relative",width:"100%",height:220,marginBottom:20}}><canvas ref={cRef}/></div>
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",color:C.muted,marginBottom:8}}>{METRICS.find(m=>m.id===tMet)?.label} log</div>
+        <div style={{maxHeight:260,overflowY:"auto"}}>
+          {[...tData].reverse().filter(d=>d.value!==null).map((d,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",padding:"8px 10px",borderBottom:"1px solid "+C.border,fontSize:13}}>
+            <span style={{color:C.muted}}>{d.label}</span>
+            <span style={{fontWeight:600,color:METRICS.find(m=>m.id===tMet)?.color}}>{d.value} {METRICS.find(m=>m.id===tMet)?.unit}</span>
+          </div>))}
+          {valid.length===0&&<div style={{padding:24,textAlign:"center",color:C.dim,fontSize:13}}>No data yet — start logging daily metrics.</div>}
+        </div>
+      </>)}
     </div>
   );
 }
 
-
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(React.createElement(App));
+
 </script>
 </body>
 </html>
